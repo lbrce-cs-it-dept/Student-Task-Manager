@@ -1,0 +1,360 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Student Task Manager</title>
+
+    <link rel="stylesheet" href="{% static 'tasks/style.css' %}">
+</head>
+
+<body>
+
+<header class="header">
+    <div class="container header-content">
+        <div>
+            <div class="logo">Student Task Manager</div>
+            <div class="header-subtitle">
+                Organize your academic tasks easily
+            </div>
+        </div>
+    </div>
+</header>
+
+
+<main class="main">
+
+    <div class="container">
+
+        <div class="top-actions">
+
+            <div>
+                <h1 class="page-title">My Tasks</h1>
+                <p class="page-description">
+                    Manage your assignments, projects and daily tasks.
+                </p>
+            </div>
+
+            <a href="{% url 'add_task' %}" class="btn btn-primary">
+                + Add New Task
+            </a>
+
+        </div>
+
+
+        <!-- Statistics -->
+
+        <div class="dashboard">
+
+            <div class="stat-card">
+                <h3>Total Tasks</h3>
+                <p>{{ total_count }}</p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Completed</h3>
+                <p>{{ completed_count }}</p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Pending</h3>
+                <p>{{ pending_count }}</p>
+            </div>
+
+        </div>
+
+
+        <!-- Search and Filter -->
+
+        <div class="search-filter">
+
+            <form method="GET" class="search-form">
+
+                <input
+                    type="text"
+                    name="search"
+                    class="form-control"
+                    placeholder="Search tasks..."
+                    value="{{ search_query }}"
+                >
+
+                <select name="status" class="form-control">
+
+                    <option
+                        value="all"
+                        {% if status_filter == "all" %}selected{% endif %}
+                    >
+                        All Tasks
+                    </option>
+
+                    <option
+                        value="pending"
+                        {% if status_filter == "pending" %}selected{% endif %}
+                    >
+                        Pending
+                    </option>
+
+                    <option
+                        value="completed"
+                        {% if status_filter == "completed" %}selected{% endif %}
+                    >
+                        Completed
+                    </option>
+
+                </select>
+
+                <button type="submit" class="btn btn-primary">
+                    Search
+                </button>
+
+                <a href="{% url 'home' %}" class="btn btn-secondary">
+                    Clear
+                </a>
+
+            </form>
+
+        </div>
+
+
+        <!-- Task List -->
+
+        {% if tasks %}
+
+            <div class="task-list">
+
+                {% for task in tasks %}
+
+                    <div class="task-card {% if task.completed %}completed{% endif %}">
+
+                        <div class="task-header">
+
+                            <div>
+
+                                <h2 class="task-title {% if task.completed %}completed{% endif %}">
+                                    {{ task.title }}
+                                </h2>
+
+                                {% if task.description %}
+                                    <p class="task-description">
+                                        {{ task.description }}
+                                    </p>
+                                {% endif %}
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- Task Information -->
+
+                        <div class="task-info">
+
+                            <span class="badge
+                                {% if task.priority == 'Low' %}
+                                    priority-low
+                                {% elif task.priority == 'High' %}
+                                    priority-high
+                                {% else %}
+                                    priority-medium
+                                {% endif %}
+                            ">
+                                {{ task.priority }} Priority
+                            </span>
+
+
+                            {% if task.completed %}
+
+                                <span class="badge status-completed">
+                                    Completed
+                                </span>
+
+                            {% else %}
+
+                                <span class="badge status-pending">
+                                    Pending
+                                </span>
+
+                            {% endif %}
+
+
+                            {% if task.due_date %}
+
+                                <span class="task-date">
+                                    Due: {{ task.due_date }}
+                                </span>
+
+                            {% endif %}
+
+                        </div>
+
+
+                        <!-- Task Actions -->
+
+                        <div class="task-actions">
+
+                            <a
+                                href="{% url 'complete_task' task.id %}"
+                                class="btn btn-success"
+                            >
+                                {% if task.completed %}
+                                    Mark Pending
+                                {% else %}
+                                    Mark Complete
+                                {% endif %}
+                            </a>
+
+
+                            <a
+                                href="{% url 'edit_task' task.id %}"
+                                class="btn btn-warning"
+                            >
+                                Edit
+                            </a>
+
+
+                            <button
+                                type="button"
+                                class="btn btn-danger"
+                                onclick="openDeleteModal('{{ task.id }}', '{{ task.title|escapejs }}')"
+                            >
+                                Delete
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-state">
+
+                <h2>No Tasks Found</h2>
+
+                <p>
+                    No tasks match your current search or filter.
+                </p>
+
+                <a href="{% url 'add_task' %}" class="btn btn-primary">
+                    + Add New Task
+                </a>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</main>
+
+
+<footer class="footer">
+    Student Task Manager &copy; 2026
+</footer>
+
+
+<!-- Delete Confirmation Modal -->
+
+<div id="deleteModal" class="modal-overlay">
+
+    <div class="delete-modal">
+
+        <div class="modal-icon">
+            !
+        </div>
+
+        <h2>Delete Task?</h2>
+
+        <p>
+            Are you sure you want to delete
+            <strong id="deleteTaskName"></strong>?
+        </p>
+
+        <p class="modal-warning">
+            This action cannot be undone.
+        </p>
+
+        <div class="modal-actions">
+
+            <button
+                type="button"
+                class="btn btn-secondary"
+                onclick="closeDeleteModal()"
+            >
+                Cancel
+            </button>
+
+            <a
+                id="confirmDeleteButton"
+                href="#"
+                class="btn btn-danger"
+            >
+                Delete
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+    function openDeleteModal(taskId, taskName) {
+
+        const modal = document.getElementById('deleteModal');
+        const taskNameElement = document.getElementById('deleteTaskName');
+        const deleteButton = document.getElementById('confirmDeleteButton');
+
+        taskNameElement.textContent = '"' + taskName + '"';
+
+        deleteButton.href = "{% url 'home' %}delete/" + taskId + "/";
+
+        modal.classList.add('show');
+
+        document.body.classList.add('modal-open');
+    }
+
+
+    function closeDeleteModal() {
+
+        const modal = document.getElementById('deleteModal');
+
+        modal.classList.remove('show');
+
+        document.body.classList.remove('modal-open');
+    }
+
+
+    document.addEventListener('keydown', function(event) {
+
+        if (event.key === 'Escape') {
+            closeDeleteModal();
+        }
+
+    });
+
+
+    document.getElementById('deleteModal').addEventListener(
+        'click',
+        function(event) {
+
+            if (event.target === this) {
+                closeDeleteModal();
+            }
+
+        }
+    );
+
+</script>
+
+
+</body>
+</html>
